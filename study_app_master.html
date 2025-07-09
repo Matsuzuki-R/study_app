@@ -31,7 +31,7 @@
 
         /* --- Setup Screen --- */
         #setup-container h2 { margin-top: 0; }
-        #setup-container .options { margin: 1.5rem 0; text-align: left; display: inline-block; }
+        #setup-container .options { margin: 1.5rem 0; text-align: center; }
         #setup-container .options label { font-size: 1.2rem; display: block; margin-bottom: 0.8rem; cursor: pointer; }
         #setup-container .mode-selection label { margin-right: 1rem; }
         #start-btn { background-color: var(--success-color); }
@@ -100,6 +100,12 @@
         #study-results-total-questions, #study-results-flagged-count { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
 
         /* --- Responsive Design --- */
+        @media (min-width: 601px) {
+            #setup-container .options {
+                text-align: left;
+                display: inline-block;
+            }
+        }
         @media (max-width: 600px) {
             body { padding: 10px; }
             .container { padding: 1rem; }
@@ -124,7 +130,7 @@
     </div>
     <div class="options">
         <button id="select-file-btn">問題ファイルを選択</button>
-        <span id="file-name-display" style="margin-left: 10px; color: var(--secondary-color);"></span>
+        <div id="file-name-display" style="margin-top: 10px; color: var(--secondary-color);"></div>
         <input type="file" id="file-selector" accept=".json" class="hidden">
     </div>
     <div class="options">
