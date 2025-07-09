@@ -1,0 +1,27 @@
+[
+    {
+        "number": "1.1",
+        "question": "日本の首都はどこですか？",
+        "answer": "東京"
+    },
+    {
+        "number": "1.2",
+        "question": "フランスの首都はどこですか？",
+        "answer": "パリ"
+    },
+    {
+        "number": "2",
+        "question": "アメリカの首都はどこですか？",
+        "answer": "ワシントンD.C."
+    },
+    {
+        "number": "3",
+        "question": "イギリスの首都はどこですか？",
+        "answer": "ロンドン"
+    },
+    {
+        "number": "4",
+        "question": "中国の首都はどこですか？",
+        "answer": "北京"
+    }
+]
