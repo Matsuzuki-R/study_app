@@ -140,6 +140,10 @@
         <input type="file" id="file-selector" accept=".json" style="display: none;">
     </div>
     <div class="options">
+        <label for="start-q-number">開始問題番号:</label>
+        <input type="number" id="start-q-number" min="1" style="width: 80px; font-size: 1rem; padding: 0.5rem;">
+    </div>
+    <div class="options">
         <label>
             <input type="checkbox" id="random-mode-checkbox">
             ランダムモードで出題する
@@ -231,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const startBtn = document.getElementById('start-btn');
     const restartBtn = document.getElementById('restart-btn');
     const randomModeCheckbox = document.getElementById('random-mode-checkbox');
+    const startQNumberInput = document.getElementById('start-q-number');
     const selectFileBtn = document.getElementById('select-file-btn');
     const fileSelector = document.getElementById('file-selector');
     const progress = document.getElementById('progress');
@@ -330,10 +335,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const success = await loadData(currentLoadedFile || lastUsedFileName);
         if (!success) return;
 
-        sessionQuestions = [...originalQuestions];
+        let allQuestions = [...originalQuestions];
+        const startNumber = parseInt(startQNumberInput.value, 10);
+
+        if (!isNaN(startNumber) && startNumber > 0) {
+            const startIndex = allQuestions.findIndex(q => parseInt(q.number, 10) >= startNumber);
+            if (startIndex !== -1) {
+                allQuestions = allQuestions.slice(startIndex);
+            }
+        }
+
+        sessionQuestions = allQuestions;
+
         if (randomModeCheckbox.checked) {
             shuffleArray(sessionQuestions);
         }
+        
         passedQuestions.clear();
         setupContainer.classList.add('hidden');
         chunkResultContainer.classList.add('hidden');
