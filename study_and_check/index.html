@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学習＆チェックアプリ</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-radius: 12px;
+            --card-width: 90%;
+            --card-max-width: 600px;
+            --card-height: 400px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .hidden { display: none; }
+        h1, h2 { color: var(--dark-gray); }
+
+        /* Study Mode Styles */
+        #study-mode { }
+        #card-container { perspective: 1500px; margin-bottom: 1rem; }
+        #card {
+            width: var(--card-width);
+            max-width: var(--card-max-width);
+            min-height: var(--card-height);
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            margin: 0 auto;
+        }
+        #card.is-flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card-back { transform: rotateY(180deg); }
+        .question-number { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); margin-bottom: 1rem; }
+        .content-text { font-size: 1.5rem; white-space: pre-wrap; text-align: left; width: 100%; }
+
+        /* Quiz Mode Styles */
+        #quiz-mode { }
+        #question-area { min-height: 150px; margin-bottom: 1.5rem; }
+        #question-text { font-size: 1.5rem; color: var(--dark-gray); white-space: pre-wrap; text-align: left; }
+        .answer-input {
+            width: 90%; padding: 0.8rem; font-size: 1.2rem; border-radius: var(--border-radius);
+            border: 2px solid #ccc; transition: border-color 0.3s; margin: 0 auto;
+        }
+        .answer-input:focus { outline: none; border-color: var(--secondary-color); }
+        .answer-input.is-incorrect { border-color: var(--danger-color); }
+        #result-area { min-height: 50px; font-size: 1.5rem; font-weight: bold; }
+        .correct { color: var(--secondary-color); }
+        .incorrect { color: var(--danger-color); }
+        #correct-answer-display { font-size: 1.2rem; color: var(--dark-gray); margin-top: 0.5rem; visibility: hidden; white-space: pre-wrap; }
+
+        /* Result Screen Styles */
+        #chunk-result-container h2 { margin-top: 0; }
+        #results-summary { margin: 2rem 0; font-size: 1.5rem; }
+        #results-score { font-size: 2.5rem; font-weight: bold; color: var(--primary-color); }
+        #results-list-container { margin-top: 2rem; text-align: left; }
+        .result-item { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; }
+        .result-item.is-correct { background-color: #f0fff4; border-left: 5px solid var(--secondary-color); }
+        .result-item.is-incorrect { background-color: #fff3f3; border-left: 5px solid var(--danger-color); }
+        .result-item-q { font-weight: bold; }
+        .result-item-a { display: none; margin-top: 0.5rem; color: var(--primary-color); }
+        .result-item:hover { cursor: pointer; filter: brightness(95%); }
+
+
+        /* Common Styles */
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            margin: 0.5rem;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        #progress { font-size: 1.2rem; color: #6c757d; margin-top: 1rem; }
+        .options { margin: 2rem 0; text-align: left; display: inline-block; }
+        .options label { font-size: 1.2rem; display: block; margin-bottom: 0.5rem; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="setup-container" class="container">
+    <h2>学習＆チェック 設定</h2>
+    <div class="options">
+        <button id="select-file-btn">問題ファイルを選択</button>
+        <input type="file" id="file-selector" accept=".json" style="display: none;">
+    </div>
+    <div class="options">
+        <label>
+            <input type="checkbox" id="random-mode-checkbox">
+            ランダムモードで出題する
+        </label>
+    </div>
+    <div>
+        <button id="start-btn">学習を始める</button>
+    </div>
+</div>
+
+<div id="app-container" class="container hidden">
+    <h1 id="mode-title"></h1>
+    <div id="study-mode">
+        <div id="card-container">
+            <div id="card">
+                <div class="card-face card-front">
+                    <div class="question-number" id="study-q-number"></div>
+                    <div class="content-text" id="study-q-text"></div>
+                </div>
+                <div class="card-face card-back">
+                    <div class="content-text" id="study-a-text"></div>
+                </div>
+            </div>
+        </div>
+        <div id="study-controls">
+            <button id="prev-study-btn">前の問題</button>
+            <button id="flip-btn">答えを見る</button>
+            <button id="next-study-btn">次の問題</button>
+        </div>
+    </div>
+
+    <div id="quiz-mode" class="hidden">
+        <div id="question-area">
+            <div class="question-number" id="quiz-q-number"></div>
+            <div id="question-text"></div>
+        </div>
+        <div id="answer-input-area"></div>
+        <div id="quiz-controls">
+            <button id="check-btn">こたえ合わせ</button>
+            <button id="show-answer-btn" class="hidden">答えを見る</button>
+            <button id="next-quiz-btn" class="hidden">次の問題</button>
+        </div>
+        <div id="result-area">
+            <span id="result-message"></span>
+            <div id="correct-answer-display"></div>
+        </div>
+    </div>
+    <div id="progress"></div>
+</div>
+
+<div id="chunk-result-container" class="container hidden">
+    <h2>チェック結果</h2>
+    <div id="results-summary">
+        <span id="correct-count">0</span> / <span id="total-questions">0</span> 問正解
+        <div id="results-score">0%</div>
+    </div>
+    <div id="results-list-container">
+        <h3>問題リスト</h3>
+        <div id="results-list"></div>
+    </div>
+    <div id="result-controls">
+        <button id="retry-incorrect-btn" class="hidden">間違えた問題を再挑戦</button>
+        <button id="next-chunk-btn" class="hidden">次の10問へ</button>
+    </div>
+</div>
+
+<div id="completion-container" class="container hidden">
+    <h1>学習完了！</h1>
+    <p>全てのセッションが完了しました。</p>
+    <button id="restart-btn">もう一度最初から</button>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Elements
+    const setupContainer = document.getElementById('setup-container');
+    const appContainer = document.getElementById('app-container');
+    const completionContainer = document.getElementById('completion-container');
+    const chunkResultContainer = document.getElementById('chunk-result-container');
+    const modeTitle = document.getElementById('mode-title');
+    const startBtn = document.getElementById('start-btn');
+    const restartBtn = document.getElementById('restart-btn');
+    const randomModeCheckbox = document.getElementById('random-mode-checkbox');
+    const selectFileBtn = document.getElementById('select-file-btn');
+    const fileSelector = document.getElementById('file-selector');
+    const progress = document.getElementById('progress');
+
+    // Study Mode Elements
+    const studyMode = document.getElementById('study-mode');
+    const card = document.getElementById('card');
+    const flipBtn = document.getElementById('flip-btn');
+    const prevStudyBtn = document.getElementById('prev-study-btn');
+    const nextStudyBtn = document.getElementById('next-study-btn');
+    const studyQNumber = document.getElementById('study-q-number');
+    const studyQText = document.getElementById('study-q-text');
+    const studyAText = document.getElementById('study-a-text');
+
+    // Quiz Mode Elements
+    const quizMode = document.getElementById('quiz-mode');
+    const quizQNumber = document.getElementById('quiz-q-number');
+    const questionText = document.getElementById('question-text');
+    const answerInputArea = document.getElementById('answer-input-area');
+    const checkBtn = document.getElementById('check-btn');
+    const showAnswerBtn = document.getElementById('show-answer-btn');
+    const nextQuizBtn = document.getElementById('next-quiz-btn');
+    const resultMessage = document.getElementById('result-message');
+    const correctAnswerDisplay = document.getElementById('correct-answer-display');
+
+    // Result Screen Elements
+    const correctCountEl = document.getElementById('correct-count');
+    const totalQuestionsEl = document.getElementById('total-questions');
+    const resultsScoreEl = document.getElementById('results-score');
+    const resultsListEl = document.getElementById('results-list');
+    const retryIncorrectBtn = document.getElementById('retry-incorrect-btn');
+    const nextChunkBtn = document.getElementById('next-chunk-btn');
+
+
+    // State
+    let originalQuestions = [];
+    let sessionQuestions = [];
+    let currentChunk = [];
+    let incorrectInChunk = new Set();
+    let questionStatusMap = new Map();
+    let currentIndex = 0;
+    let currentMode = 'study'; // 'study' or 'quiz'
+    let lastUsedFileName = '../mondai.json';
+    let currentLoadedFile = null;
+
+    // --- Data Loading ---
+    async function loadData(fileOrName) {
+        try {
+            let data;
+            if (fileOrName instanceof File) {
+                data = await JSON.parse(await fileOrName.text());
+                lastUsedFileName = fileOrName.name;
+            } else {
+                const response = await fetch(fileOrName);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                data = await response.json();
+                lastUsedFileName = fileOrName;
+            }
+            originalQuestions = groupQuestions(data);
+            return true;
+        } catch (error) {
+            console.error("Could not load questions:", error);
+            alert(`問題の読み込みに失敗しました。ファイル「${lastUsedFileName}」を確認してください。`);
+            return false;
+        }
+    }
+
+    function groupQuestions(data) {
+        const grouped = new Map();
+        data.forEach(item => {
+            const baseNumber = item.number.split('.')[0];
+            if (!grouped.has(baseNumber)) {
+                grouped.set(baseNumber, { number: baseNumber, questions: [], answers: [] });
+            }
+            const entry = grouped.get(baseNumber);
+            entry.questions.push(item.question);
+            entry.answers.push(item.answer);
+        });
+        return Array.from(grouped.values());
+    }
+
+    function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    // --- Session Management ---
+    async function startNewSession() {
+        const success = await loadData(currentLoadedFile || lastUsedFileName);
+        if (!success) return;
+
+        sessionQuestions = [...originalQuestions];
+        if (randomModeCheckbox.checked) {
+            shuffleArray(sessionQuestions);
+        }
+        setupContainer.classList.add('hidden');
+        chunkResultContainer.classList.add('hidden');
+        completionContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        startNextChunk();
+    }
+
+    function startNextChunk() {
+        if (sessionQuestions.length === 0) {
+            showCompletionScreen();
+            return;
+        }
+        currentChunk = sessionQuestions.splice(0, 10);
+        incorrectInChunk.clear();
+        questionStatusMap.clear();
+        appContainer.classList.add('hidden');
+        chunkResultContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        setMode('study');
+    }
+
+    function setMode(mode) {
+        currentMode = mode;
+        currentIndex = 0;
+        if (mode === 'study') {
+            modeTitle.textContent = '学習モード';
+            quizMode.classList.add('hidden');
+            studyMode.classList.remove('hidden');
+            displayStudyQuestion();
+        } else {
+            modeTitle.textContent = 'チェックモード';
+            studyMode.classList.add('hidden');
+            quizMode.classList.remove('hidden');
+            displayQuizQuestion();
+        }
+    }
+
+    function showCompletionScreen() {
+        appContainer.classList.add('hidden');
+        chunkResultContainer.classList.add('hidden');
+        completionContainer.classList.remove('hidden');
+    }
+
+    // --- Study Mode Logic ---
+    function displayStudyQuestion() {
+        if (card.classList.contains('is-flipped')) {
+            card.classList.remove('is-flipped');
+        }
+        const question = currentChunk[currentIndex];
+        const markers = ['①', '②', '③', '④', '⑤'];
+        const qText = question.questions.length > 1 ? question.questions.map((q, i) => `${markers[i]} ${q}`).join('\n') : question.questions[0];
+        const aText = question.answers.length > 1 ? question.answers.map((a, i) => `${markers[i]} ${a}`).join('\n') : question.answers[0];
+
+        studyQNumber.textContent = `問題 ${question.number}`;
+        studyQText.textContent = qText;
+        studyAText.textContent = aText;
+        progress.textContent = `学習中: ${currentIndex + 1} / ${currentChunk.length}`;
+        
+        prevStudyBtn.disabled = currentIndex === 0;
+        nextStudyBtn.textContent = (currentIndex === currentChunk.length - 1) ? 'チェックモードへ' : '次の問題';
+    }
+
+    function handleNextStudy() {
+        if (currentIndex < currentChunk.length - 1) {
+            currentIndex++;
+            displayStudyQuestion();
+        } else {
+            setMode('quiz');
+        }
+    }
+
+    function handlePrevStudy() {
+        if (currentIndex > 0) {
+            currentIndex--;
+            displayStudyQuestion();
+        }
+    }
+
+    // --- Quiz Mode Logic ---
+    function displayQuizQuestion() {
+        const question = currentChunk[currentIndex];
+        quizQNumber.textContent = `問題 ${question.number}`;
+        const markers = ['①', '②', '③', '④', '⑤'];
+        questionText.textContent = question.questions.length > 1 ? question.questions.map((q, i) => `${markers[i]} ${q}`).join('\n') : question.questions[0];
+
+        answerInputArea.innerHTML = '';
+        question.answers.forEach((ans, i) => {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'answer-input';
+            input.placeholder = question.questions.length > 1 ? `${markers[i]}の答え` : '答えを入力';
+            answerInputArea.appendChild(input);
+        });
+        progress.textContent = `チェック中: ${currentIndex + 1} / ${currentChunk.length}`;
+        resetQuizState();
+    }
+
+    function resetQuizState() {
+        document.querySelectorAll('.answer-input').forEach(input => {
+            input.disabled = false;
+            input.value = '';
+            input.classList.remove('is-incorrect');
+        });
+        resultMessage.textContent = '';
+        correctAnswerDisplay.style.visibility = 'hidden';
+        checkBtn.classList.remove('hidden');
+        showAnswerBtn.classList.add('hidden');
+        nextQuizBtn.classList.add('hidden');
+        const firstInput = answerInputArea.querySelector('.answer-input');
+        if(firstInput) firstInput.focus();
+    }
+
+    function checkAnswer() {
+        const question = currentChunk[currentIndex];
+        const userInputs = Array.from(document.querySelectorAll('.answer-input'));
+        let allCorrect = true;
+
+        userInputs.forEach((input, i) => {
+            const userAnswer = normalize(input.value);
+            const correctAnswer = normalize(question.answers[i]);
+            if (userAnswer !== correctAnswer) {
+                allCorrect = false;
+                input.classList.add('is-incorrect');
+            } else {
+                input.classList.remove('is-incorrect');
+            }
+        });
+
+        if (allCorrect) {
+            resultMessage.textContent = '正解！';
+            resultMessage.className = 'correct';
+            if (!questionStatusMap.has(question)) {
+                 questionStatusMap.set(question, 'correct');
+            }
+            userInputs.forEach(input => input.disabled = true);
+            checkBtn.classList.add('hidden');
+            showAnswerBtn.classList.add('hidden');
+            nextQuizBtn.classList.remove('hidden');
+            nextQuizBtn.focus();
+        } else {
+            resultMessage.textContent = '不正解。再入力してもう一度こたえ合わせしてください。';
+            resultMessage.className = 'incorrect';
+            showAnswerBtn.classList.remove('hidden');
+            incorrectInChunk.add(question);
+            questionStatusMap.set(question, 'incorrect');
+            checkBtn.classList.remove('hidden'); // Keep check button visible for retry
+        }
+    }
+
+    function handleNextQuiz() {
+        if (currentIndex < currentChunk.length - 1) {
+            currentIndex++;
+            displayQuizQuestion();
+        } else {
+            showChunkResults();
+        }
+    }
+    
+    // --- Result Screen Logic ---
+    function showChunkResults() {
+        appContainer.classList.add('hidden');
+        chunkResultContainer.classList.remove('hidden');
+
+        const total = currentChunk.length;
+        const incorrectCount = incorrectInChunk.size;
+        const correctCount = total - incorrectCount;
+        const score = total > 0 ? Math.round((correctCount / total) * 100) : 0;
+
+        correctCountEl.textContent = correctCount;
+        totalQuestionsEl.textContent = total;
+        resultsScoreEl.textContent = `${score}%`;
+
+        resultsListEl.innerHTML = '';
+        currentChunk.forEach(q => {
+            const status = questionStatusMap.get(q) || 'correct';
+            const item = document.createElement('div');
+            item.className = `result-item ${status === 'incorrect' ? 'is-incorrect' : 'is-correct'}`;
+            
+            const markers = ['①', '②', '③', '④', '⑤'];
+            const qText = q.questions.length > 1 ? q.questions.map((text, i) => `${markers[i]} ${text}`).join('\n') : q.questions[0];
+            const aText = q.answers.length > 1 ? q.answers.map((text, i) => `${markers[i]} ${text}`).join('\n') : q.answers[0];
+
+            item.innerHTML = `<div class="result-item-q">Q${q.number}: ${qText}</div><div class="result-item-a">A: ${aText}</div>`;
+            item.addEventListener('click', () => {
+                const answerDiv = item.querySelector('.result-item-a');
+                answerDiv.style.display = answerDiv.style.display === 'none' ? 'block' : 'none';
+            });
+            resultsListEl.appendChild(item);
+        });
+
+        if (incorrectCount > 0) {
+            retryIncorrectBtn.classList.remove('hidden');
+            nextChunkBtn.classList.add('hidden');
+        } else {
+            retryIncorrectBtn.classList.add('hidden');
+            nextChunkBtn.classList.remove('hidden');
+        }
+    }
+
+    function retryIncorrect() {
+        currentChunk = Array.from(incorrectInChunk);
+        incorrectInChunk.clear();
+        questionStatusMap.clear();
+        chunkResultContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        setMode('study');
+    }
+
+
+    function normalize(str) {
+        if (typeof str !== 'string') return '';
+        return str.normalize('NFKC').toLowerCase().replace(/\s/g, '');
+    }
+
+
+    // --- Event Listeners ---
+    startBtn.addEventListener('click', startNewSession);
+    restartBtn.addEventListener('click', startNewSession);
+    selectFileBtn.addEventListener('click', () => fileSelector.click());
+    fileSelector.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            currentLoadedFile = file;
+            alert(`ファイル「${file.name}」が選択されました。`);
+        }
+    });
+
+    // Main Controls
+    nextChunkBtn.addEventListener('click', startNextChunk);
+    retryIncorrectBtn.addEventListener('click', retryIncorrect);
+
+    // Study mode
+    flipBtn.addEventListener('click', () => card.classList.toggle('is-flipped'));
+    prevStudyBtn.addEventListener('click', handlePrevStudy);
+    nextStudyBtn.addEventListener('click', handleNextStudy);
+
+    // Quiz mode
+    checkBtn.addEventListener('click', checkAnswer);
+    nextQuizBtn.addEventListener('click', handleNextQuiz);
+    showAnswerBtn.addEventListener('click', () => {
+        const question = currentChunk[currentIndex];
+        const markers = ['①', '②', '③', '④', '⑤'];
+        correctAnswerDisplay.textContent = `正解: ${question.answers.map((a, i) => `${markers[i]} ${a}`).join(', ')}`;
+        correctAnswerDisplay.style.visibility = 'visible';
+        document.querySelectorAll('.answer-input').forEach(input => input.disabled = true);
+        showAnswerBtn.classList.add('hidden');
+        nextQuizBtn.classList.remove('hidden');
+        nextQuizBtn.focus();
+    });
+    answerInputArea.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !checkBtn.classList.contains('hidden')) {
+            checkAnswer();
+        }
+    });
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (appContainer.classList.contains('hidden') || currentMode !== 'study') return;
+
+        switch(e.key) {
+            case 'ArrowRight':
+                handleNextStudy();
+                break;
+            case 'ArrowLeft':
+                handlePrevStudy();
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                flipBtn.click();
+                break;
+        }
+    });
+});
+</script>
+
+</body>
+</html>
