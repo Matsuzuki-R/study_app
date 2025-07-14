@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.classList.remove('is-flipped');
         }
         const question = currentChunk[currentIndex];
-        const markers = ['①', '②', '③', '④', '⑤'];
+        const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
         const qText = question.questions.length > 1 ? question.questions.map((q, i) => `${markers[i]} ${q}`).join('\n') : question.questions[0];
         const aText = question.answers.length > 1 ? question.answers.map((a, i) => `${markers[i]} ${a}`).join('\n') : question.answers[0];
 
@@ -446,7 +446,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function displayQuizQuestion() {
         const question = currentChunk[currentIndex];
         quizQNumber.textContent = `問題 ${question.number}`;
-        const markers = ['①', '②', '③', '④', '⑤'];
+        const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
         questionText.textContent = question.questions.length > 1 ? question.questions.map((q, i) => `${markers[i]} ${q}`).join('\n') : question.questions[0];
 
         answerInputArea.innerHTML = '';
@@ -487,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (passedQuestions.has(question)) {
             // Show correct answer and self-judgement buttons
-            const markers = ['①', '②', '③', '④', '⑤'];
+            const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
             const answerText = question.answers.map((ans, i) => `${markers[i]} ${ans}`).join('\n');
             correctAnswerDisplay.textContent = `正解:\n${answerText}`;
             correctAnswerDisplay.style.visibility = 'visible';
@@ -570,7 +570,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const item = document.createElement('div');
             item.className = `result-item ${status === 'incorrect' ? 'is-incorrect' : 'is-correct'}`;
             
-            const markers = ['①', '②', '③', '④', '⑤'];
+            const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
             const qText = q.questions.length > 1 ? q.questions.map((text, i) => `${markers[i]} ${text}`).join('\n') : q.questions[0];
             const aText = q.answers.length > 1 ? q.answers.map((text, i) => `${markers[i]} ${text}`).join('\n') : q.answers[0];
 
@@ -637,7 +637,7 @@ document.addEventListener('DOMContentLoaded', () => {
     judgeIncorrectBtn.addEventListener('click', () => handleSelfJudgement(false));
     showAnswerBtn.addEventListener('click', () => {
         const question = currentChunk[currentIndex];
-        const markers = ['①', '②', '③', '④', '⑤'];
+        const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
         correctAnswerDisplay.textContent = `正解: ${question.answers.map((a, i) => `${markers[i]} ${a}`).join(', ')}`;
         correctAnswerDisplay.style.visibility = 'visible';
         document.querySelectorAll('.answer-input').forEach(input => input.disabled = true);
