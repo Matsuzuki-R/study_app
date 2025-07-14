@@ -41,7 +41,6 @@
         h1, h2 { color: var(--dark-gray); }
 
         /* Study Mode Styles */
-        #study-mode { }
         #card-container { perspective: 1500px; margin-bottom: 1rem; }
         #card {
             width: var(--card-width);
@@ -74,7 +73,6 @@
         .content-text { font-size: 1.5rem; white-space: pre-wrap; text-align: left; width: 100%; }
 
         /* Quiz Mode Styles */
-        #quiz-mode { }
         #question-area { min-height: 150px; margin-bottom: 1.5rem; }
         #question-text { font-size: 1.5rem; color: var(--dark-gray); white-space: pre-wrap; text-align: left; }
         .answer-input {
@@ -87,6 +85,9 @@
         .correct { color: var(--secondary-color); }
         .incorrect { color: var(--danger-color); }
         #correct-answer-display { font-size: 1.2rem; color: var(--dark-gray); margin-top: 0.5rem; visibility: hidden; white-space: pre-wrap; }
+        #self-judgement-controls button.correct-btn { background-color: var(--secondary-color); }
+        #self-judgement-controls button.incorrect-btn { background-color: var(--danger-color); }
+
 
         /* Result Screen Styles */
         #chunk-result-container h2 { margin-top: 0; }
@@ -116,6 +117,15 @@
         }
         button:hover { background-color: #0056b3; }
         button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        #pass-check-btn {
+            background-color: #6c757d; /* Gray for default/OFF state */
+            color: white;
+        }
+        #pass-check-btn.is-passed {
+            background-color: var(--warning-color); /* Yellow for ON state */
+            color: var(--dark-gray);
+        }
+
         #progress { font-size: 1.2rem; color: #6c757d; margin-top: 1rem; }
         .options { margin: 2rem 0; text-align: left; display: inline-block; }
         .options label { font-size: 1.2rem; display: block; margin-bottom: 0.5rem; cursor: pointer; }
@@ -154,6 +164,9 @@
                 </div>
             </div>
         </div>
+        <div id="pass-check-controls" style="margin-bottom: 1rem;">
+            <button id="pass-check-btn">チェックをパス</button>
+        </div>
         <div id="study-controls">
             <button id="prev-study-btn">前の問題</button>
             <button id="flip-btn">答えを見る</button>
@@ -171,6 +184,11 @@
             <button id="check-btn">こたえ合わせ</button>
             <button id="show-answer-btn" class="hidden">答えを見る</button>
             <button id="next-quiz-btn" class="hidden">次の問題</button>
+        </div>
+         <div id="self-judgement-controls" class="hidden">
+            <p>答えを確認し、自己判定してください</p>
+            <button class="correct-btn" id="judge-correct-btn">正解</button>
+            <button class="incorrect-btn" id="judge-incorrect-btn">不正解</button>
         </div>
         <div id="result-area">
             <span id="result-message"></span>
@@ -223,6 +241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const flipBtn = document.getElementById('flip-btn');
     const prevStudyBtn = document.getElementById('prev-study-btn');
     const nextStudyBtn = document.getElementById('next-study-btn');
+    const passCheckBtn = document.getElementById('pass-check-btn');
     const studyQNumber = document.getElementById('study-q-number');
     const studyQText = document.getElementById('study-q-text');
     const studyAText = document.getElementById('study-a-text');
@@ -232,9 +251,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const quizQNumber = document.getElementById('quiz-q-number');
     const questionText = document.getElementById('question-text');
     const answerInputArea = document.getElementById('answer-input-area');
+    const quizControls = document.getElementById('quiz-controls');
     const checkBtn = document.getElementById('check-btn');
     const showAnswerBtn = document.getElementById('show-answer-btn');
     const nextQuizBtn = document.getElementById('next-quiz-btn');
+    const selfJudgementControls = document.getElementById('self-judgement-controls');
+    const judgeCorrectBtn = document.getElementById('judge-correct-btn');
+    const judgeIncorrectBtn = document.getElementById('judge-incorrect-btn');
     const resultMessage = document.getElementById('result-message');
     const correctAnswerDisplay = document.getElementById('correct-answer-display');
 
@@ -251,6 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let originalQuestions = [];
     let sessionQuestions = [];
     let currentChunk = [];
+    let passedQuestions = new Set();
     let incorrectInChunk = new Set();
     let questionStatusMap = new Map();
     let currentIndex = 0;
@@ -310,6 +334,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (randomModeCheckbox.checked) {
             shuffleArray(sessionQuestions);
         }
+        passedQuestions.clear();
         setupContainer.classList.add('hidden');
         chunkResultContainer.classList.add('hidden');
         completionContainer.classList.add('hidden');
@@ -370,6 +395,24 @@ document.addEventListener('DOMContentLoaded', () => {
         
         prevStudyBtn.disabled = currentIndex === 0;
         nextStudyBtn.textContent = (currentIndex === currentChunk.length - 1) ? 'チェックモードへ' : '次の問題';
+        
+        if (passedQuestions.has(question)) {
+            passCheckBtn.classList.add('is-passed');
+            passCheckBtn.textContent = 'パス済み';
+        } else {
+            passCheckBtn.classList.remove('is-passed');
+            passCheckBtn.textContent = 'チェックをパス';
+        }
+    }
+
+    function handlePassCheck() {
+        const question = currentChunk[currentIndex];
+        if (passedQuestions.has(question)) {
+            passedQuestions.delete(question);
+        } else {
+            passedQuestions.add(question);
+        }
+        displayStudyQuestion(); // Re-render to update button state
     }
 
     function handleNextStudy() {
@@ -396,6 +439,9 @@ document.addEventListener('DOMContentLoaded', () => {
         questionText.textContent = question.questions.length > 1 ? question.questions.map((q, i) => `${markers[i]} ${q}`).join('\n') : question.questions[0];
 
         answerInputArea.innerHTML = '';
+        quizControls.classList.remove('hidden');
+        selfJudgementControls.classList.add('hidden');
+
         question.answers.forEach((ans, i) => {
             const input = document.createElement('input');
             input.type = 'text';
@@ -403,6 +449,7 @@ document.addEventListener('DOMContentLoaded', () => {
             input.placeholder = question.questions.length > 1 ? `${markers[i]}の答え` : '答えを入力';
             answerInputArea.appendChild(input);
         });
+        
         progress.textContent = `チェック中: ${currentIndex + 1} / ${currentChunk.length}`;
         resetQuizState();
     }
@@ -418,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
         checkBtn.classList.remove('hidden');
         showAnswerBtn.classList.add('hidden');
         nextQuizBtn.classList.add('hidden');
+        selfJudgementControls.classList.add('hidden');
         const firstInput = answerInputArea.querySelector('.answer-input');
         if(firstInput) firstInput.focus();
     }
@@ -425,8 +473,20 @@ document.addEventListener('DOMContentLoaded', () => {
     function checkAnswer() {
         const question = currentChunk[currentIndex];
         const userInputs = Array.from(document.querySelectorAll('.answer-input'));
-        let allCorrect = true;
 
+        if (passedQuestions.has(question)) {
+            // Show correct answer and self-judgement buttons
+            const markers = ['①', '②', '③', '④', '⑤'];
+            const answerText = question.answers.map((ans, i) => `${markers[i]} ${ans}`).join('\n');
+            correctAnswerDisplay.textContent = `正解:\n${answerText}`;
+            correctAnswerDisplay.style.visibility = 'visible';
+            userInputs.forEach(input => input.disabled = true);
+            quizControls.classList.add('hidden');
+            selfJudgementControls.classList.remove('hidden');
+            return; // End check here for passed questions
+        }
+
+        let allCorrect = true;
         userInputs.forEach((input, i) => {
             const userAnswer = normalize(input.value);
             const correctAnswer = normalize(question.answers[i]);
@@ -457,6 +517,17 @@ document.addEventListener('DOMContentLoaded', () => {
             questionStatusMap.set(question, 'incorrect');
             checkBtn.classList.remove('hidden'); // Keep check button visible for retry
         }
+    }
+    
+    function handleSelfJudgement(isCorrect) {
+        const question = currentChunk[currentIndex];
+        if (isCorrect) {
+            questionStatusMap.set(question, 'correct');
+        } else {
+            incorrectInChunk.add(question);
+            questionStatusMap.set(question, 'incorrect');
+        }
+        handleNextQuiz();
     }
 
     function handleNextQuiz() {
@@ -545,10 +616,13 @@ document.addEventListener('DOMContentLoaded', () => {
     flipBtn.addEventListener('click', () => card.classList.toggle('is-flipped'));
     prevStudyBtn.addEventListener('click', handlePrevStudy);
     nextStudyBtn.addEventListener('click', handleNextStudy);
+    passCheckBtn.addEventListener('click', handlePassCheck);
 
     // Quiz mode
     checkBtn.addEventListener('click', checkAnswer);
     nextQuizBtn.addEventListener('click', handleNextQuiz);
+    judgeCorrectBtn.addEventListener('click', () => handleSelfJudgement(true));
+    judgeIncorrectBtn.addEventListener('click', () => handleSelfJudgement(false));
     showAnswerBtn.addEventListener('click', () => {
         const question = currentChunk[currentIndex];
         const markers = ['①', '②', '③', '④', '⑤'];
@@ -556,6 +630,7 @@ document.addEventListener('DOMContentLoaded', () => {
         correctAnswerDisplay.style.visibility = 'visible';
         document.querySelectorAll('.answer-input').forEach(input => input.disabled = true);
         showAnswerBtn.classList.add('hidden');
+        checkBtn.classList.add('hidden');
         nextQuizBtn.classList.remove('hidden');
         nextQuizBtn.focus();
     });
@@ -579,6 +654,10 @@ document.addEventListener('DOMContentLoaded', () => {
             case 'ArrowDown':
                 e.preventDefault();
                 flipBtn.click();
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                passCheckBtn.click();
                 break;
         }
     });
