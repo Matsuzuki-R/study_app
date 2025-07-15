@@ -603,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function normalize(str) {
         if (typeof str !== 'string') return '';
-        return str.normalize('NFKC').toLowerCase().replace(/\s/g, '');
+        return str.replace(/（.*?）/g, '').normalize('NFKC').toLowerCase().replace(/\s/g, '');
     }
 
 
