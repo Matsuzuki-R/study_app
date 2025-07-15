@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>試験対策学習アプリ</title>
+    <style>
+        :root {
+            --card-width: 90%;
+            --card-max-width: 600px;
+            --card-height: 400px;
+            --primary-color: #007bff;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-radius: 12px;
+            --flag-color: #ffc107; /* Warning yellow */
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: var(--light-gray);
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        #app-container, #setup-container, #completion-container {
+            width: 100%;
+            max-width: 700px;
+            text-align: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        #app-container, #completion-container { display: none; }
+        .hidden { display: none; }
+        h1, h2 { color: var(--dark-gray); }
+        #card-container { perspective: 1500px; margin-bottom: 1rem; /* Reduced margin */ }
+        #card {
+            width: var(--card-width);
+            max-width: var(--card-max-width);
+            min-height: var(--card-height); /* height -> min-height に変更 */
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s;
+            margin: 0 auto;
+        }
+        #card.is-flipped { transform: rotateY(180deg); }
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: var(--border-radius);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            /* overflow-y: auto; を削除 */
+        }
+        .card-back { transform: rotateY(180deg); }
+        .question-number { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); margin-bottom: 1rem; }
+        .content-text { font-size: 1.5rem; white-space: pre-wrap; text-align: left; width: 100%; }
+        #navigation button {
+            min-width: 220px; /* 長いテキストに合わせて最小幅を設定 */
+        }
+        #flag-control { text-align: center; margin-bottom: 1rem; }
+        button {
+            padding: 0.8rem 1.5rem;
+            font-size: 1rem;
+            font-weight: bold;
+            color: white;
+            background-color: var(--primary-color);
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+        }
+        button:hover { background-color: #0056b3; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        #progress { font-size: 1.2rem; color: #6c757d; }
+        /* Setup & Completion Screen */
+        #setup-container h2, #completion-container h1 { margin-top: 0; }
+        .options { margin: 2rem 0; text-align: left; display: inline-block; }
+        .options label { font-size: 1.2rem; display: block; margin-bottom: 0.5rem; cursor: pointer; }
+        #start-btn, #retry-btn { background-color: #28a745; }
+        #start-btn:hover, #retry-btn:hover { background-color: #218838; }
+        #flag-btn { background-color: #6c757d; min-width: 220px; }
+        #flag-btn.is-flagged { background-color: var(--flag-color); color: var(--dark-gray); }
+        #flag-btn:hover { background-color: #5a6268; }
+        #flag-btn.is-flagged:hover { background-color: #e0a800; }
+        #retry-flagged-btn { background-color: var(--flag-color); color: var(--dark-gray); }
+        #retry-flagged-btn:hover { background-color: #e0a800; }
+        /* Results */
+        #results-summary { margin: 2rem 0; font-size: 1.5rem; }
+        #results-total-questions, #results-flagged-count { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
+        #results-list-container { margin-top: 2rem; text-align: left; }
+        #results-list-container h2 { font-size: 1.5rem; }
+        .result-item { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; background-color: #f8f9fa; border-left: 5px solid #ccc; }
+        .result-item.is-flagged-item { background-color: #fff8e1; border-left: 5px solid var(--flag-color); }
+        .result-item-q { font-weight: bold; }
+        .result-item-a { display: none; margin-top: 0.5rem; color: var(--primary-color); }
+        .result-item:hover { cursor: pointer; filter: brightness(95%); }
+        #completion-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+
+        /* Responsive Design for Mobile */
+        @media (max-width: 600px) {
+            :root {
+                --card-height: 300px; /* スマホではカードの最小高さを少し小さく */
+            }
+            body { padding: 10px; }
+            #app-container, #setup-container, #completion-container { padding: 1rem; }
+            .content-text { font-size: 1.2rem; }
+            h1 { font-size: 1.8rem; }
+            #navigation button {
+                min-width: auto; /* ボタンの最小幅をリセット */
+                padding: 0.8rem 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="setup-container">
+    <h2>学習アプリ設定</h2>
+    <div class="options">
+        <button id="select-file-btn">問題ファイルを選択</button>
+        <input type="file" id="file-selector" accept=".json" style="display: none;">
+    </div>
+    <div class="options">
+        <label>
+            <input type="checkbox" id="random-mode-checkbox">
+            ランダムモードで出題する
+        </label>
+    </div>
+    <div>
+        <button id="start-btn">学習を始める</button>
+    </div>
+</div>
+
+<div id="app-container">
+    <h1>試験対策学習アプリ</h1>
+    <div id="card-container">
+        <div id="card">
+            <div class="card-face card-front">
+                <div class="question-number" id="question-number"></div>
+                <div class="content-text" id="question-text"></div>
+            </div>
+            <div class="card-face card-back">
+                <div class="content-text" id="answer-text"></div>
+            </div>
+        </div>
+    </div>
+    <div id="flag-control">
+        <button id="flag-btn">フラグを付ける</button>
+    </div>
+    <div id="navigation">
+        <button id="prev-btn">前の問題</button>
+        <button id="flip-btn">答えを見る</button>
+        <button id="next-btn">次の問題</button>
+    </div>
+    <div id="progress"></div>
+</div>
+
+<div id="completion-container">
+    <h1>学習結果</h1>
+    <div id="results-summary">
+        全 <span id="results-total-questions">0</span> 問中、フラグを付けた問題が <span id="results-flagged-count">0</span> 問あります。
+    </div>
+    <div id="results-list-container">
+        <h2>全問題</h2>
+        <div id="results-list"></div>
+    </div>
+    <div id="completion-controls">
+        <button id="retry-btn">もう一度挑戦する</button>
+        <button id="retry-flagged-btn" style="display: none;">フラグを付けた問題だけ再挑戦</button>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const elements = {
+            setupContainer: document.getElementById('setup-container'),
+            appContainer: document.getElementById('app-container'),
+            completionContainer: document.getElementById('completion-container'),
+            startBtn: document.getElementById('start-btn'),
+            retryBtn: document.getElementById('retry-btn'),
+            retryFlaggedBtn: document.getElementById('retry-flagged-btn'),
+            randomModeCheckbox: document.getElementById('random-mode-checkbox'),
+            card: document.getElementById('card'),
+            flipBtn: document.getElementById('flip-btn'),
+            nextBtn: document.getElementById('next-btn'),
+            prevBtn: document.getElementById('prev-btn'),
+            flagBtn: document.getElementById('flag-btn'),
+            questionNumberEl: document.getElementById('question-number'),
+            questionTextEl: document.getElementById('question-text'),
+            answerTextEl: document.getElementById('answer-text'),
+            progressIndicatorEl: document.getElementById('progress'),
+            // Results elements
+            resultsTotalQuestions: document.getElementById('results-total-questions'),
+            resultsFlaggedCount: document.getElementById('results-flagged-count'),
+            resultsList: document.getElementById('results-list'),
+            selectFileBtn: document.getElementById('select-file-btn'),
+            fileSelector: document.getElementById('file-selector'),
+        };
+
+        let originalQuestionsData = [];
+        let questionsData = []; // Questions for the current session
+        let currentIndex = 0;
+        let flaggedQuestions = new Set(); // Stores references to question objects that are flagged
+        let lastUsedFileName = 'mondai.json'; // Stores the name of the last successfully loaded file
+        let currentLoadedFile = null; // To store the File object if loaded from user selection in the current setup session
+
+        function groupQuestions(data) {
+            const grouped = new Map();
+            data.forEach(item => {
+                const baseNumber = item.number.split('.')[0];
+                if (!grouped.has(baseNumber)) {
+                    grouped.set(baseNumber, { number: baseNumber, questions: [], answers: [] });
+                }
+                const entry = grouped.get(baseNumber);
+                entry.questions.push(item.question);
+                entry.answers.push(item.answer);
+            });
+
+            return Array.from(grouped.values()).map(group => {
+                if (group.questions.length > 1) {
+                    const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+                    const combinedQuestion = group.questions.map((q, i) => `${markers[i] || ''} ${q}`).join('\n');
+                    const combinedAnswer = group.answers.map((a, i) => `${markers[i] || ''} ${a}`).join('\n');
+                    return { number: group.number, question: combinedQuestion, answer: combinedAnswer };
+                } else {
+                    return { number: group.number, question: group.questions[0], answer: group.answers[0] };
+                }
+            });
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+                
+
+        async function loadOriginalData(fileOrName = null) {
+            let rawData;
+            let fileNameToLoad = 'mondai.json'; // Default to mondai.json
+
+            if (fileOrName instanceof File) {
+                // User selected a file via input type="file"
+                try {
+                    const reader = new FileReader();
+                    rawData = await new Promise((resolve, reject) => {
+                        reader.onload = (e) => resolve(JSON.parse(e.target.result));
+                        reader.onerror = (e) => reject(e);
+                        reader.readAsText(fileOrName);
+                    });
+                    lastUsedFileName = fileOrName.name; // Update last used file name
+                } catch (error) {
+                    console.error("Could not load questions from selected file:", error);
+                    alert(`選択されたファイルの読み込みに失敗しました。ファイルを確認してください。`);
+                    return false;
+                }
+            } else if (typeof fileOrName === 'string') {
+                // Load by file name (e.g., from lastUsedFileName)
+                fileNameToLoad = fileOrName;
+                try {
+                    const response = await fetch(fileNameToLoad);
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    rawData = await response.json();
+                    lastUsedFileName = fileNameToLoad; // Update last used file name
+                } catch (error) {
+                    console.error("Could not load questions from " + fileNameToLoad + ":", error);
+                    alert(`問題の読み込みに失敗しました。ファイル「${fileNameToLoad}」を確認してください。`);
+                    return false;
+                }
+            } else {
+                // No specific file/name provided, use lastUsedFileName or default
+                fileNameToLoad = lastUsedFileName || 'mondai.json';
+                try {
+                    const response = await fetch(fileNameToLoad);
+                    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+                    rawData = await response.json();
+                    lastUsedFileName = fileNameToLoad; // Update last used file name
+                } catch (error) {
+                    console.error("Could not load questions from " + fileNameToLoad + ":", error);
+                    alert(`問題の読み込みに失敗しました。ファイル「${fileNameToLoad}」を確認してください。`);
+                    return false;
+                }
+            }
+            originalQuestionsData = groupQuestions(rawData);
+            return true;
+        }
+
+        async function startSession(questionSet) {
+            questionsData = [...questionSet];
+            if (elements.randomModeCheckbox.checked && questionSet === originalQuestionsData) {
+                shuffleArray(questionsData);
+            }
+
+            if (questionsData.length > 0) {
+                currentIndex = 0;
+                elements.setupContainer.style.display = 'none';
+                elements.completionContainer.style.display = 'none';
+                elements.appContainer.style.display = 'block';
+                displayQuestion(currentIndex);
+            } else {
+                alert("対象の問題がありません。");
+                elements.setupContainer.style.display = 'block';
+            }
+        }
+
+        function displayQuestion(index) {
+            if (elements.card.classList.contains('is-flipped')) {
+                elements.card.classList.remove('is-flipped');
+            }
+            
+            const question = questionsData[index];
+            elements.questionNumberEl.textContent = `問題 ${question.number}`;
+            elements.questionTextEl.textContent = question.question;
+            elements.answerTextEl.textContent = question.answer;
+            
+            elements.progressIndicatorEl.textContent = `${index + 1} / ${questionsData.length}`;
+            
+            elements.prevBtn.disabled = index === 0;
+            // Change next button text and enable/disable based on whether it's the last question
+            if (index === questionsData.length - 1) {
+                elements.nextBtn.textContent = '学習を終了する';
+                elements.nextBtn.disabled = false; // Enable to allow finishing
+            } else {
+                elements.nextBtn.textContent = '次の問題';
+                elements.nextBtn.disabled = false;
+            }
+
+            // Update flag button state
+            if (flaggedQuestions.has(question)) {
+                elements.flagBtn.classList.add('is-flagged');
+                elements.flagBtn.textContent = 'フラグを外す';
+            } else {
+                elements.flagBtn.classList.remove('is-flagged');
+                elements.flagBtn.textContent = 'フラグを付ける';
+            }
+        }
+
+        function showResults() {
+            console.log("Entering showResults function.");
+            console.log("originalQuestionsData length:", originalQuestionsData.length);
+            elements.resultsTotalQuestions.textContent = originalQuestionsData.length;
+            elements.resultsFlaggedCount.textContent = flaggedQuestions.size;
+
+            elements.resultsList.innerHTML = '';
+            originalQuestionsData.forEach(q => {
+                const isFlagged = flaggedQuestions.has(q);
+                const item = document.createElement('div');
+                item.className = `result-item ${isFlagged ? 'is-flagged-item' : ''}`;
+                
+                const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+                const qText = q.question;
+                const aText = q.answer;
+
+                item.innerHTML = `<div class="result-item-q">Q${q.number}: ${qText}</div><div class="result-item-a">A: ${aText}</div>`;
+                item.addEventListener('click', () => {
+                    const answerDiv = item.querySelector('.result-item-a');
+                    answerDiv.style.display = answerDiv.style.display === 'none' ? 'block' : 'none';
+                });
+                elements.resultsList.appendChild(item);
+            });
+
+            if (flaggedQuestions.size > 0) {
+                elements.retryFlaggedBtn.style.display = 'inline-block';
+            } else {
+                elements.retryFlaggedBtn.style.display = 'none';
+            }
+
+            elements.appContainer.style.display = 'none';
+            elements.completionContainer.style.display = 'block';
+            console.log("Completion container should be visible now.");
+            console.log("appContainer display after change:", elements.appContainer.style.display);
+            console.log("completionContainer display after change:", elements.completionContainer.style.display);
+        }
+
+        function goToNext() {
+            console.log(`goToNext called. currentIndex: ${currentIndex}, questionsData.length: ${questionsData.length}`);
+            if (currentIndex < questionsData.length - 1) {
+                currentIndex++;
+                displayQuestion(currentIndex);
+            } else {
+                // If it's the last question, show results
+                console.log("Last question reached. Calling showResults().");
+                showResults();
+            }
+        }
+
+        function goToPrev() {
+            if (currentIndex > 0) {
+                currentIndex--;
+                displayQuestion(currentIndex);
+            }
+        }
+
+        elements.startBtn.addEventListener('click', async () => {
+            const success = await loadOriginalData(currentLoadedFile || lastUsedFileName);
+            if (success) {
+                flaggedQuestions.clear(); // Clear flags for a new full session
+                startSession(originalQuestionsData);
+            }
+        });
+
+        elements.selectFileBtn.addEventListener('click', () => {
+            elements.fileSelector.click();
+        });
+
+        elements.fileSelector.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                currentLoadedFile = file;
+                alert(`ファイル「${file.name}」が選択されました。`);
+            }
+        });
+
+        elements.retryBtn.addEventListener('click', () => {
+            elements.completionContainer.style.display = 'none';
+            elements.setupContainer.style.display = 'block';
+            currentLoadedFile = null; // Reset selected file for next session
+        });
+
+        elements.retryFlaggedBtn.addEventListener('click', () => {
+            startSession(Array.from(flaggedQuestions));
+        });
+
+        elements.flipBtn.addEventListener('click', () => elements.card.classList.toggle('is-flipped'));
+        elements.nextBtn.addEventListener('click', goToNext);
+        elements.prevBtn.addEventListener('click', goToPrev);
+
+        elements.flagBtn.addEventListener('click', () => {
+            const currentQuestion = questionsData[currentIndex];
+            if (flaggedQuestions.has(currentQuestion)) {
+                flaggedQuestions.delete(currentQuestion);
+                elements.flagBtn.classList.remove('is-flagged');
+                elements.flagBtn.textContent = 'フラグを付ける';
+            } else {
+                flaggedQuestions.add(currentQuestion);
+                elements.flagBtn.classList.add('is-flagged');
+                elements.flagBtn.textContent = 'フラグを外す';
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (elements.appContainer.style.display !== 'block') return;
+
+            switch(e.key) {
+                case 'ArrowRight':
+                    goToNext();
+                    break;
+                case 'ArrowLeft':
+                    goToPrev();
+                    break;
+                case 'ArrowUp':
+                    elements.flagBtn.click();
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    elements.flipBtn.click();
+                    break;
+            }
+        });
+
+        // Initialize dropdown and add event listener
+        populateJsonDropdown();
+        elements.jsonSelect.addEventListener('change', (event) => {
+            selectedJsonFile = event.target.value;
+        });
+    });
+</script>
+
+</body>
+</html>

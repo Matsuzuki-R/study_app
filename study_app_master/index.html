@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>総合学習アプリ</title>
+    <style>
+        /* --- Global Styles --- */
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --light-gray: #f8f9fa;
+            --dark-gray: #343a40;
+            --border-radius: 12px;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            display: flex; justify-content: center; align-items: center; min-height: 100vh;
+            background-color: var(--light-gray); margin: 0; padding: 20px; box-sizing: border-box;
+        }
+        .container { width: 100%; max-width: 700px; text-align: center; background-color: white; padding: 2rem; border-radius: var(--border-radius); box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .hidden { display: none; }
+        h1, h2 { color: var(--dark-gray); }
+        button { padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: bold; color: white; border: none; border-radius: var(--border-radius); cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        button:disabled { background-color: #a0a0a0; cursor: not-allowed; }
+        .progress { font-size: 1.2rem; color: #6c757d; margin-top: 1rem; }
+
+        /* --- Setup Screen --- */
+        #setup-container h2 { margin-top: 0; }
+        #setup-container .options { margin: 1.5rem 0; text-align: center; }
+        #setup-container .options label { font-size: 1.2rem; display: block; margin-bottom: 0.8rem; cursor: pointer; }
+        #setup-container .mode-selection label { margin-right: 1rem; }
+        #start-btn { background-color: var(--success-color); }
+        #start-btn:hover { background-color: #218838; }
+        #select-file-btn { background-color: var(--primary-color); }
+        #select-file-btn:hover { background-color: #0056b3; }
+
+        /* --- Study (Flashcard) Mode --- */
+        #study-mode-container { --card-height: 400px; }
+        #card-container { perspective: 1500px; margin-bottom: 1rem; }
+        #card { width: 90%; max-width: 600px; min-height: var(--card-height); position: relative; transform-style: preserve-3d; transition: transform 0.6s; margin: 0 auto; }
+        #card.is-flipped { transform: rotateY(180deg); }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; border-radius: var(--border-radius); box-shadow: 0 4px 15px rgba(0,0,0,0.1); background-color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .card-back { transform: rotateY(180deg); }
+        #study-mode-container .question-number { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); margin-bottom: 1rem; }
+        .content-text { font-size: 1.5rem; white-space: pre-wrap; text-align: left; width: 100%; }
+        #flag-control { text-align: center; margin-bottom: 1rem; }
+        #navigation { display: flex; justify-content: center; gap: 1rem; }
+        #navigation button { background-color: var(--primary-color); min-width: 220px; }
+        #navigation button:hover { background-color: #0056b3; }
+        #navigation button:disabled { background-color: #a0a0a0; }
+        #flag-btn { background-color: var(--secondary-color); min-width: 220px; }
+        #flag-btn.is-flagged { background-color: var(--warning-color); color: var(--dark-gray); }
+        #flag-btn:hover { background-color: #5a6268; }
+        #flag-btn.is-flagged:hover { background-color: #e0a800; }
+
+        /* --- Quiz (Input) Mode --- */
+        #quiz-question-area { min-height: 150px; margin-bottom: 1.5rem; }
+        #quiz-mode-container .question-number { font-size: 1.2rem; font-weight: bold; color: var(--primary-color); margin-bottom: 1rem; }
+        #quiz-question-text { font-size: 1.5rem; color: var(--dark-gray); white-space: pre-wrap; text-align: left; }
+        #answer-input-area { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+        .answer-input { width: 90%; padding: 0.8rem; font-size: 1.2rem; border-radius: var(--border-radius); border: 2px solid #ccc; transition: border-color 0.3s; margin: 0 auto; }
+        .answer-input:focus { outline: none; border-color: var(--primary-color); }
+        .answer-input.is-incorrect { border-color: var(--danger-color); }
+        #quiz-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; }
+        #check-btn { background-color: var(--success-color); }
+        #check-btn:hover { background-color: #218838; }
+        #show-answer-btn, #quiz-next-btn { background-color: var(--primary-color); }
+        #show-answer-btn:hover, #quiz-next-btn:hover { background-color: #0056b3; }
+        #result-area { min-height: 50px; font-size: 1.5rem; font-weight: bold; }
+        .correct { color: var(--success-color); }
+        .incorrect { color: var(--danger-color); }
+        #correct-answer-display { font-size: 1.2rem; color: var(--dark-gray); margin-top: 0.5rem; visibility: hidden; white-space: pre-wrap; }
+
+        /* --- Completion Screens --- */
+        .completion-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+        .retry-btn { background-color: var(--success-color); }
+        .retry-btn:hover { background-color: #218838; }
+        #retry-incorrect-btn, #retry-flagged-btn { background-color: var(--warning-color); color: var(--dark-gray); }
+        #retry-incorrect-btn:hover, #retry-flagged-btn:hover { background-color: #e0a800; }
+        .results-summary { margin: 2rem 0; font-size: 1.5rem; }
+        .results-list-container { margin-top: 2rem; text-align: left; }
+        .results-list-container h2 { font-size: 1.5rem; }
+        .result-item { padding: 1rem; margin-bottom: 1rem; border-radius: 8px; cursor: pointer; }
+        .result-item:hover { filter: brightness(95%); }
+        .result-item-q { font-weight: bold; }
+        .result-item-a { display: none; margin-top: 0.5rem; }
+        #quiz-completion-container .result-item.is-correct { background-color: #f0fff4; border-left: 5px solid var(--success-color); }
+        #quiz-completion-container .result-item.is-incorrect { background-color: #fff3f3; border-left: 5px solid var(--danger-color); }
+        #quiz-completion-container .result-item.is-corrected { background-color: #fff8e1; border-left: 5px solid var(--warning-color); }
+        #quiz-completion-container .result-item.is-incorrect .result-item-a { color: var(--success-color); }
+        #quiz-results-score { font-size: 2.5rem; font-weight: bold; color: var(--success-color); }
+        #study-completion-container .result-item { background-color: #f8f9fa; border-left: 5px solid #ccc; }
+        #study-completion-container .result-item.is-flagged-item { background-color: #fff8e1; border-left: 5px solid var(--warning-color); }
+        #study-completion-container .result-item-a { color: var(--primary-color); }
+        #study-results-total-questions, #study-results-flagged-count { font-size: 1.8rem; font-weight: bold; color: var(--primary-color); }
+
+        /* --- Responsive Design --- */
+        @media (min-width: 601px) {
+            #setup-container .options {
+                text-align: left;
+                display: inline-block;
+            }
+        }
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 1rem; }
+            h1 { font-size: 1.8rem; }
+            #study-mode-container { --card-height: 250px; }
+            .content-text { font-size: 1.2rem; }
+            #navigation button { min-width: auto; padding: 0.8rem 1rem; }
+            #flag-btn { min-width: auto; }
+            #quiz-question-area { min-height: 100px; }
+            #quiz-question-text { font-size: 1.2rem; }
+            .answer-input { font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="setup-container" class="container">
+    <h2>総合学習アプリ 設定</h2>
+    <div class="options mode-selection">
+        <label><input type="radio" name="mode" value="study" id="mode-study" checked> 単語帳形式 (暗記)</label>
+        <label><input type="radio" name="mode" value="quiz" id="mode-quiz"> 入力クイズ形式 (テスト)</label>
+    </div>
+    <div class="options">
+        <button id="select-file-btn">問題ファイルを選択</button>
+        <div id="file-name-display" style="margin-top: 10px; color: var(--secondary-color);"></div>
+        <input type="file" id="file-selector" accept=".json" class="hidden">
+    </div>
+    <div class="options">
+        <label><input type="checkbox" id="random-mode-checkbox"> ランダムモードで出題する</label>
+    </div>
+    <div><button id="start-btn">学習を始める</button></div>
+</div>
+
+<div id="study-mode-container" class="container hidden">
+    <h1>単語帳モード</h1>
+    <div id="card-container">
+        <div id="card">
+            <div class="card-face card-front">
+                <div class="question-number" id="study-question-number"></div>
+                <div class="content-text" id="study-question-text"></div>
+            </div>
+            <div class="card-face card-back">
+                <div class="content-text" id="study-answer-text"></div>
+            </div>
+        </div>
+    </div>
+    <!-- Correct Original Layout -->
+    <div id="flag-control">
+        <button id="flag-btn">フラグを付ける</button>
+    </div>
+    <div id="navigation">
+        <button id="study-prev-btn">前の問題</button>
+        <button id="flip-btn">答えを見る</button>
+        <button id="study-next-btn">次の問題</button>
+    </div>
+    <div id="study-progress" class="progress"></div>
+</div>
+
+<div id="quiz-mode-container" class="container hidden">
+    <h1>入力クイズモード</h1>
+    <div id="quiz-question-area">
+        <div class="question-number" id="quiz-question-number"></div>
+        <div id="quiz-question-text"></div>
+    </div>
+    <div id="answer-input-area"></div>
+    <div id="quiz-controls">
+        <button id="check-btn">こたえ合わせ</button>
+        <button id="show-answer-btn" class="hidden">答えを見る</button>
+        <button id="quiz-next-btn" class="hidden">次の問題</button>
+    </div>
+    <div id="result-area">
+        <span id="result-message"></span>
+        <div id="correct-answer-display"></div>
+    </div>
+    <div id="quiz-progress" class="progress"></div>
+</div>
+
+<div id="study-completion-container" class="container hidden">
+    <h1>学習結果 (単語帳)</h1>
+    <div class="results-summary">
+        全 <span id="study-results-total-questions">0</span> 問中、フラグを付けた問題が <span id="study-results-flagged-count">0</span> 問あります。
+    </div>
+    <div class="results-list-container">
+        <h2>全問題の結果</h2>
+        <div id="study-results-list"></div>
+    </div>
+    <div class="completion-controls">
+        <button id="study-retry-btn" class="retry-btn">もう一度挑戦する</button>
+        <button id="retry-flagged-btn" class="hidden">フラグを付けた問題だけ再挑戦</button>
+    </div>
+</div>
+
+<div id="quiz-completion-container" class="container hidden">
+    <h1>学習結果 (クイズ)</h1>
+    <div class="results-summary">
+        <span id="correct-count">0</span> / <span id="total-questions">0</span> 問正解
+        <div id="quiz-results-score">0%</div>
+    </div>
+    <div class="results-list-container">
+        <h2>全問題の結果</h2>
+        <div id="quiz-results-list"></div>
+    </div>
+    <div class="completion-controls">
+        <button id="quiz-retry-btn" class="retry-btn">もう一度挑戦する</button>
+        <button id="retry-incorrect-btn" class="hidden">間違えた問題だけ再挑戦</button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let originalQuestions = [], currentQuestions = [], currentIndex = 0, currentMode = 'study';
+    let lastUsedFileName = 'mondai.json', currentLoadedFile = null;
+    let flaggedQuestions = new Set(), questionsToRetry = new Set(), finalIncorrectForScore = new Set(), questionStatusMap = new Map();
+
+    const el = {
+        setupContainer: document.getElementById('setup-container'),
+        studyModeContainer: document.getElementById('study-mode-container'),
+        quizModeContainer: document.getElementById('quiz-mode-container'),
+        studyCompletionContainer: document.getElementById('study-completion-container'),
+        quizCompletionContainer: document.getElementById('quiz-completion-container'),
+        modeStudyRadio: document.getElementById('mode-study'),
+        selectFileBtn: document.getElementById('select-file-btn'),
+        fileSelector: document.getElementById('file-selector'),
+        fileNameDisplay: document.getElementById('file-name-display'),
+        randomModeCheckbox: document.getElementById('random-mode-checkbox'),
+        startBtn: document.getElementById('start-btn'),
+        card: document.getElementById('card'),
+        studyQuestionNumber: document.getElementById('study-question-number'),
+        studyQuestionText: document.getElementById('study-question-text'),
+        studyAnswerText: document.getElementById('study-answer-text'),
+        studyPrevBtn: document.getElementById('study-prev-btn'),
+        flipBtn: document.getElementById('flip-btn'),
+        studyNextBtn: document.getElementById('study-next-btn'),
+        flagBtn: document.getElementById('flag-btn'),
+        studyProgress: document.getElementById('study-progress'),
+        quizQuestionNumber: document.getElementById('quiz-question-number'),
+        quizQuestionText: document.getElementById('quiz-question-text'),
+        answerInputArea: document.getElementById('answer-input-area'),
+        checkBtn: document.getElementById('check-btn'),
+        showAnswerBtn: document.getElementById('show-answer-btn'),
+        quizNextBtn: document.getElementById('quiz-next-btn'),
+        resultMessage: document.getElementById('result-message'),
+        correctAnswerDisplay: document.getElementById('correct-answer-display'),
+        quizProgress: document.getElementById('quiz-progress'),
+        studyResultsTotal: document.getElementById('study-results-total-questions'),
+        studyResultsFlagged: document.getElementById('study-results-flagged-count'),
+        studyResultsList: document.getElementById('study-results-list'),
+        studyRetryBtn: document.getElementById('study-retry-btn'),
+        retryFlaggedBtn: document.getElementById('retry-flagged-btn'),
+        quizCorrectCount: document.getElementById('correct-count'),
+        quizTotalQuestions: document.getElementById('total-questions'),
+        quizResultsScore: document.getElementById('quiz-results-score'),
+        quizResultsList: document.getElementById('quiz-results-list'),
+        quizRetryBtn: document.getElementById('quiz-retry-btn'),
+        retryIncorrectBtn: document.getElementById('retry-incorrect-btn'),
+    };
+
+    const markers = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩'];
+    function shuffleArray(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+    function groupQuestions(data) { const g = new Map(); data.forEach(i => { const b = i.number.split('.')[0]; if (!g.has(b)) g.set(b, { number: b, questions: [], answers: [] }); const e = g.get(b); e.questions.push(i.question); e.answers.push(i.answer); }); return Array.from(g.values()); }
+    async function loadData(f) { let d; try { if (f instanceof File) { d = await new Promise((res, rej) => { const r = new FileReader(); r.onload = (e) => res(JSON.parse(e.target.result)); r.onerror = rej; r.readAsText(f); }); lastUsedFileName = f.name; } else { const r = await fetch(f); if (!r.ok) throw new Error(`${r.status}`); d = await r.json(); lastUsedFileName = f; } originalQuestions = groupQuestions(d); return true; } catch (e) { alert(`問題読込失敗: ${f.name || f}`); return false; } } 
+    function startSession(qs, mode) { currentMode = mode; currentQuestions = [...qs]; if (el.randomModeCheckbox.checked && qs === originalQuestions) shuffleArray(currentQuestions); if (currentQuestions.length === 0) { alert("対象の問題がありません。"); return; } currentIndex = 0; el.setupContainer.classList.add('hidden'); el.quizCompletionContainer.classList.add('hidden'); el.studyCompletionContainer.classList.add('hidden'); if (currentMode === 'study') { if (qs === originalQuestions) flaggedQuestions.clear(); el.studyModeContainer.classList.remove('hidden'); displayStudyQuestion(currentIndex); } else { if (qs === originalQuestions) { questionsToRetry.clear(); finalIncorrectForScore.clear(); questionStatusMap.clear(); } el.quizModeContainer.classList.remove('hidden'); displayQuizQuestion(currentIndex); } }
+    function showSetupScreen() { [el.studyModeContainer, el.quizModeContainer, el.studyCompletionContainer, el.quizCompletionContainer].forEach(e => e.classList.add('hidden')); el.setupContainer.classList.remove('hidden'); currentLoadedFile = null; el.fileNameDisplay.textContent = `(デフォルト: ${lastUsedFileName})`; }
+    function displayStudyQuestion(i) { if (el.card.classList.contains('is-flipped')) el.card.classList.remove('is-flipped'); const q = currentQuestions[i]; const qT = q.questions.length > 1 ? q.questions.map((t, i) => `${markers[i]} ${t}`).join('\n') : q.questions[0]; const aT = q.answers.length > 1 ? q.answers.map((t, i) => `${markers[i]} ${t}`).join('\n') : q.answers[0]; el.studyQuestionNumber.textContent = `問題 ${q.number}`; el.studyQuestionText.textContent = qT; el.studyAnswerText.textContent = aT; el.studyProgress.textContent = `${i + 1} / ${currentQuestions.length}`; el.studyPrevBtn.disabled = i === 0; el.studyNextBtn.textContent = (i === currentQuestions.length - 1) ? '学習を終了する' : '次の問題'; if (flaggedQuestions.has(q)) { el.flagBtn.classList.add('is-flagged'); el.flagBtn.textContent = 'フラグを外す'; } else { el.flagBtn.classList.remove('is-flagged'); el.flagBtn.textContent = 'フラグを付ける'; } }
+    function showStudyResults() { el.studyResultsTotal.textContent = originalQuestions.length; el.studyResultsFlagged.textContent = flaggedQuestions.size; el.studyResultsList.innerHTML = ''; originalQuestions.forEach(q => { const isF = flaggedQuestions.has(q); const i = document.createElement('div'); i.className = `result-item ${isF ? 'is-flagged-item' : ''}`; const qT = q.questions.map((t, idx) => `${markers[idx]} ${t}`).join('<br>'); const aT = q.answers.map((t, idx) => `${markers[idx]} ${t}`).join('<br>'); i.innerHTML = `<div class="result-item-q">Q${q.number}: ${qT}</div><div class="result-item-a">A: ${aT}</div>`; i.addEventListener('click', () => i.querySelector('.result-item-a').style.display = 'block'); el.studyResultsList.appendChild(i); }); el.retryFlaggedBtn.classList.toggle('hidden', flaggedQuestions.size === 0); el.studyModeContainer.classList.add('hidden'); el.studyCompletionContainer.classList.remove('hidden'); }
+    function displayQuizQuestion(i) { const q = currentQuestions[i]; el.quizQuestionNumber.textContent = `問題 ${q.number}`; el.quizQuestionText.textContent = q.questions.length > 1 ? q.questions.map((t, i) => `${markers[i]} ${t}`).join('\n') : q.questions[0]; el.answerInputArea.innerHTML = ''; q.answers.forEach((a, i) => { const inp = document.createElement('input'); inp.type = 'text'; inp.className = 'answer-input'; inp.placeholder = q.questions.length > 1 ? `${markers[i]}の答え` : '答えを入力'; el.answerInputArea.appendChild(inp); }); el.quizProgress.textContent = `${i + 1} / ${currentQuestions.length}`; el.resultMessage.textContent = ''; el.correctAnswerDisplay.style.visibility = 'hidden'; el.checkBtn.classList.remove('hidden'); el.showAnswerBtn.classList.add('hidden'); el.quizNextBtn.classList.add('hidden'); el.answerInputArea.querySelector('.answer-input')?.focus(); }
+    function normalize(s) { return (s || '').normalize('NFKC').toLowerCase().replace(/[\s\p{P}]/gu, ''); }
+    function checkAnswer() { const q = currentQuestions[currentIndex]; const ins = Array.from(el.answerInputArea.querySelectorAll('.answer-input')); let allC = true; ins.forEach((inp, i) => { if (normalize(inp.value) !== normalize(q.answers[i])) { allC = false; inp.classList.add('is-incorrect'); } else { inp.classList.remove('is-incorrect'); } }); if (allC) { el.resultMessage.textContent = '正解！'; el.resultMessage.className = 'correct'; ins.forEach(i => i.disabled = true); el.checkBtn.classList.add('hidden'); el.quizNextBtn.classList.remove('hidden'); el.quizNextBtn.focus(); if (questionsToRetry.has(q)) questionStatusMap.set(q, 'corrected'); else questionStatusMap.set(q, 'correct'); finalIncorrectForScore.delete(q); } else { el.resultMessage.textContent = '不正解'; el.resultMessage.className = 'incorrect'; el.showAnswerBtn.classList.remove('hidden'); questionsToRetry.add(q); finalIncorrectForScore.add(q); questionStatusMap.set(q, 'incorrect'); } }
+    function showQuizResults() { const t = currentQuestions.length; const c = t - finalIncorrectForScore.size; const s = t > 0 ? Math.round((c / t) * 100) : 0; el.quizCorrectCount.textContent = c; el.quizTotalQuestions.textContent = t; el.quizResultsScore.textContent = `${s}%`; el.quizResultsList.innerHTML = ''; currentQuestions.forEach(q => { const st = questionStatusMap.get(q) || 'correct'; const i = document.createElement('div'); i.className = `result-item is-${st}`; const qT = q.questions.map((t, idx) => `${markers[idx]} ${t}`).join('<br>'); const aT = q.answers.map((t, idx) => `${markers[idx]} ${t}`).join('<br>'); i.innerHTML = `<div class="result-item-q">Q${q.number}: ${qT}</div><div class="result-item-a">A: ${aT}</div>`; i.addEventListener('click', () => i.querySelector('.result-item-a').style.display = 'block'); el.quizResultsList.appendChild(i); }); el.retryIncorrectBtn.classList.toggle('hidden', questionsToRetry.size === 0); el.quizModeContainer.classList.add('hidden'); el.quizCompletionContainer.classList.remove('hidden'); }
+
+    el.startBtn.addEventListener('click', async () => { const m = el.modeStudyRadio.checked ? 'study' : 'quiz'; const s = await loadData(currentLoadedFile || lastUsedFileName); if (s) startSession(originalQuestions, m); });
+    el.selectFileBtn.addEventListener('click', () => el.fileSelector.click());
+    el.fileSelector.addEventListener('change', (e) => { const f = e.target.files[0]; if (f) { currentLoadedFile = f; el.fileNameDisplay.textContent = f.name; } });
+    el.studyRetryBtn.addEventListener('click', showSetupScreen);
+    el.quizRetryBtn.addEventListener('click', showSetupScreen);
+    el.studyNextBtn.addEventListener('click', () => { if (currentIndex < currentQuestions.length - 1) displayStudyQuestion(++currentIndex); else showStudyResults(); });
+    el.studyPrevBtn.addEventListener('click', () => { if (currentIndex > 0) displayStudyQuestion(--currentIndex); });
+    el.flipBtn.addEventListener('click', () => el.card.classList.toggle('is-flipped'));
+    el.flagBtn.addEventListener('click', () => { const q = currentQuestions[currentIndex]; if (flaggedQuestions.has(q)) flaggedQuestions.delete(q); else flaggedQuestions.add(q); displayStudyQuestion(currentIndex); });
+    el.retryFlaggedBtn.addEventListener('click', () => startSession(Array.from(flaggedQuestions), 'study'));
+    el.checkBtn.addEventListener('click', checkAnswer);
+    el.answerInputArea.addEventListener('keypress', (e) => { if (e.key === 'Enter' && !el.checkBtn.classList.contains('hidden')) { e.preventDefault(); checkAnswer(); } });
+    el.showAnswerBtn.addEventListener('click', () => { const q = currentQuestions[currentIndex]; el.correctAnswerDisplay.textContent = `正解: ${q.answers.join(', ')}`; el.correctAnswerDisplay.style.visibility = 'visible'; el.checkBtn.classList.add('hidden'); el.showAnswerBtn.classList.add('hidden'); el.quizNextBtn.classList.remove('hidden');         questionStatusMap.set(q, 'incorrect'); questionsToRetry.add(q); finalIncorrectForScore.add(q); });
+    el.quizNextBtn.addEventListener('click', () => { if (currentIndex < currentQuestions.length - 1) displayQuizQuestion(++currentIndex); else showQuizResults(); });
+    el.retryIncorrectBtn.addEventListener('click', () => startSession(Array.from(questionsToRetry), 'quiz'));
+    document.addEventListener('keydown', (e) => { if (el.studyModeContainer.classList.contains('hidden')) return; switch(e.key) { case 'ArrowRight': el.studyNextBtn.click(); break; case 'ArrowLeft': el.studyPrevBtn.click(); break; case 'ArrowDown': e.preventDefault(); el.flipBtn.click(); break; case 'f': case 'F': case 'ArrowUp': el.flagBtn.click(); break; } });
+
+    showSetupScreen();
+});
+</script>
+</body>
+</html>
